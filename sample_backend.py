@@ -1,3 +1,5 @@
+import string
+import random
 from flask import Flask
 from flask import request
 from flask import jsonify
@@ -38,17 +40,11 @@ users = {
 }
 
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
-
-@app.route('/users', methods=['GET', 'POST', 'DELETE'])
+@app.route('/users', methods=['GET', 'POST'])
 def get_users():
    if request.method == 'GET':
       search_username = request.args.get('name')
       search_job = request.args.get('job')
-      print(search_job==None)
       if search_username and search_job:
          subdict = {'users_list' : []}
          for user in users['users_list']:
@@ -64,20 +60,11 @@ def get_users():
          return subdict
    elif request.method == 'POST':
       userToAdd = request.get_json()
+      userToAdd['id'] = gen_unique_id()
       users['users_list'].append(userToAdd)
-      resp = jsonify(success=True)
-      #resp.status_code = 200 #optionally, you can always set a response code. 
-      # 200 is the default code for a normal response
+      resp = jsonify(success=True, updatedUser=userToAdd)
+      resp.status_code = 201 #optionally, you can always set a response code. 
       return resp
-   elif request.method == 'DELETE':
-      userToDelete = request.get_json()
-      userToDelete['id']
-      for user in users['users_list']:
-         if user['id'] == userToDelete['id']:
-            users['users_list'].remove(user)
-      resp = jsonify(success=True)
-      return resp
-   
 
 
 @app.route('/users/<id>')
@@ -88,3 +75,29 @@ def get_user(id):
            return user
       return ({})
    return users
+
+@app.route('/users/<id>', methods=['DELETE'])
+def delete_user(id):
+   print(id)
+   if request.method == 'DELETE':
+      for user in users['users_list']:
+         if user['id'] == id:
+            print("here")
+            users['users_list'].remove(user)
+            resp = jsonify(success=True)
+            resp.status_code = 204
+            return resp
+      resp = jsonify(success=True)
+      resp.status_code = 404
+      return resp
+   
+
+def gen_unique_id():
+   id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+   i = 0
+   while i < len(users['users_list']):
+      if users['users_list'][i]['id'] == id:
+         id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+         i = 0
+      i += 1
+   return id
